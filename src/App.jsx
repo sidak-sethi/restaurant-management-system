@@ -4,10 +4,16 @@ import Menu from "./pages/Menu";
 import ChefDashboard from "./pages/ChefDashboard";
 
 export default function App() {
-  const [page, setPage] = useState("menu");
+  const [page, setPage] = useState(() => {
+    return window.location.pathname === "/chef" ? "chef" : "menu";
+  });
 
   useEffect(() => {
-    if (window.location.pathname === "/chef") setPage("chef");
+    const handleLocationChange = () => {
+      setPage(window.location.pathname === "/chef" ? "chef" : "menu");
+    };
+    window.addEventListener("popstate", handleLocationChange);
+    return () => window.removeEventListener("popstate", handleLocationChange);
   }, []);
 
   return page === "chef" ? <ChefDashboard /> : <Menu />;

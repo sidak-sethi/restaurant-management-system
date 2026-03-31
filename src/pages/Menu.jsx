@@ -18,187 +18,9 @@ import {
 } from "lucide-react";
 import "../styles/menu.css";
 
-// ── MENU DATA ──────────────────────────────────────────────────────────────
-const MENU_DATA = {
-  Breakfast: [
-    {
-      id: "b1",
-      name: "Aloo Puri",
-      desc: "3 pcs · golden puri with spiced aloo sabzi",
-      price: 120,
-    },
-    {
-      id: "b2",
-      name: "Paneer Stuffed Paratha",
-      desc: "Crisp layered paratha · pickle & curd",
-      price: 90,
-    },
-    {
-      id: "b3",
-      name: "Chole Bhature",
-      desc: "Fluffy bhature · tangy Punjabi chole · onion salad",
-      price: 180,
-    },
-    {
-      id: "b4",
-      name: "Poha with Sev",
-      desc: "Light flattened rice · mustard tempering · coriander",
-      price: 70,
-    },
-    {
-      id: "b5",
-      name: "Mixed Veg Cutlet",
-      desc: "Pan-fried potato patties · mint chutney",
-      price: 110,
-    },
-    {
-      id: "b6",
-      name: "Bedmi Poori",
-      desc: "Urad dal stuffed pooris · classic Banaras style",
-      price: 130,
-    },
-    {
-      id: "b7",
-      name: "Sweet Lassi",
-      desc: "Clay pot · chilled · full-cream milk · rose water",
-      price: 80,
-    },
-  ],
-  Snacks: [
-    {
-      id: "s1",
-      name: "Hara Bhara Kabab",
-      desc: "Spinach & peas patties · grilled · tamarind dip",
-      price: 160,
-    },
-    {
-      id: "s2",
-      name: "Dahi Ke Sholay",
-      desc: "Bread triangles · hung curd filling · golden fried",
-      price: 190,
-    },
-    {
-      id: "s3",
-      name: "Crispy Corn Chaat",
-      desc: "Sweet corn · peppers · chaat masala · lemon",
-      price: 140,
-    },
-    {
-      id: "s4",
-      name: "Paneer Tikka Classic",
-      desc: "Marinated cottage cheese · tandoor charred · 4 pcs",
-      price: 220,
-    },
-    {
-      id: "s5",
-      name: "Veg Spring Rolls",
-      desc: "Crispy rolls · mixed vegetables · schezwan dip",
-      price: 150,
-    },
-    {
-      id: "s6",
-      name: "Chilli Mushroom",
-      desc: "Indo-Chinese wok-tossed mushrooms · spring onion",
-      price: 180,
-    },
-    {
-      id: "s7",
-      name: "Soya Chaap Afghani",
-      desc: "Creamy malai marinade · charcoal grilled · 3 pcs",
-      price: 210,
-    },
-  ],
-  Lunch: [
-    {
-      id: "l1",
-      name: "Dal Makhani",
-      desc: "Slow-cooked overnight · black lentils · butter & cream",
-      price: 220,
-    },
-    {
-      id: "l2",
-      name: "Paneer Butter Masala",
-      desc: "Rich tomato gravy · cottage cheese · kasuri methi",
-      price: 260,
-    },
-    {
-      id: "l3",
-      name: "Mix Veg Handi",
-      desc: "Seasonal vegetables · dum cooked · mild spices",
-      price: 190,
-    },
-    {
-      id: "l4",
-      name: "Jeera Rice",
-      desc: "Basmati · tempered cumin · ghee finish",
-      price: 140,
-    },
-    {
-      id: "l5",
-      name: "Malai Kofta",
-      desc: "Paneer & potato dumplings · silky makhani sauce",
-      price: 240,
-    },
-    {
-      id: "l6",
-      name: "Hyderabadi Dum Biryani",
-      desc: "Aged basmati · whole spices · saffron · raita aside",
-      price: 280,
-    },
-    {
-      id: "l7",
-      name: "Garlic Naan",
-      desc: "2 pcs · tandoor baked · butter & fresh garlic",
-      price: 90,
-    },
-  ],
-  Dinner: [
-    {
-      id: "d1",
-      name: "Shahi Paneer",
-      desc: "Cashew & cream gravy · mild aromatic · royal prep",
-      price: 250,
-    },
-    {
-      id: "d2",
-      name: "Kadhai Paneer",
-      desc: "Bell peppers · onion · bold kadhai masala",
-      price: 260,
-    },
-    {
-      id: "d3",
-      name: "Amritsari Kulcha Combo",
-      desc: "Stuffed kulcha · chole · lassi · full platter",
-      price: 220,
-    },
-    {
-      id: "d4",
-      name: "Veg Pulao",
-      desc: "Fragrant basmati · fresh vegetables · whole spices",
-      price: 180,
-    },
-    {
-      id: "d5",
-      name: "Tandoori Roti Basket",
-      desc: "4 pcs whole wheat roti · hand-patted · live tandoor",
-      price: 140,
-    },
-    {
-      id: "d6",
-      name: "Gulab Jamun",
-      desc: "2 pcs · khoya dumplings · warm rose sugar syrup",
-      price: 90,
-    },
-    {
-      id: "d7",
-      name: "Sizzling Brownie",
-      desc: "Warm chocolate brownie · vanilla ice cream · caramel",
-      price: 160,
-    },
-  ],
-};
+const API_BASE_URL = "http://localhost:5000/api";
 
-const CATEGORIES = Object.keys(MENU_DATA);
+// ── MENU DATA ──────────────────────────────────────────────────────────────
 const TABLE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -208,42 +30,13 @@ function getTableId() {
   return !isNaN(n) && n >= 1 && n <= 10 ? "Table " + n : "Table 0";
 }
 function getActiveOrderCount() {
-  try {
-    const all = JSON.parse(localStorage.getItem("chef_orders")) || [];
-    return all.filter((o) => o.status === "cooking" && o.endTime > Date.now())
-      .length;
-  } catch (_) {
-    return 0;
-  }
+  return 2;
 }
 function calcWaitTime() {
   return Math.floor(Math.random() * 5) + 5 + getActiveOrderCount() * 3;
 }
-function getQueuePosition(placedAt) {
-  let pos = 1;
-  try {
-    const all = JSON.parse(localStorage.getItem("chef_orders")) || [];
-    all.forEach((o) => {
-      if (o.status === "cooking" && o.placedAt < placedAt) pos++;
-    });
-  } catch (_) {}
-  return pos;
-}
-function ordinal(n) {
-  const s = ["th", "st", "nd", "rd"],
-    v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-function pushOrderToChef(order) {
-  try {
-    const ex = JSON.parse(localStorage.getItem("chef_orders")) || [];
-    ex.push(order);
-    localStorage.setItem("chef_orders", JSON.stringify(ex));
-  } catch (_) {}
-}
 
 // ── TABLE SELECTOR POPUP ───────────────────────────────────────────────────
-// Shown when "Order more items" is clicked from tracking screen
 function TableSelector({ onSelect }) {
   return (
     <motion.div
@@ -291,18 +84,13 @@ function TableSelector({ onSelect }) {
 }
 
 // ── FLOATING CART BUBBLE ───────────────────────────────────────────────────
-// Always visible top-right when cart has items; opens a mini cart drawer
 function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
   const [open, setOpen] = useState(false);
-
-  // Close on outside click
-  const overlayRef = useRef(null);
 
   if (totalItems === 0) return null;
 
   return (
     <>
-      {/* The bubble button */}
       <motion.button
         className="float-cart-btn"
         onClick={() => setOpen((o) => !o)}
@@ -317,11 +105,9 @@ function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
         <span className="float-cart-count">{totalItems}</span>
       </motion.button>
 
-      {/* Mini cart panel */}
       <AnimatePresence>
         {open && (
           <>
-            {/* backdrop */}
             <motion.div
               className="float-cart-backdrop"
               initial={{ opacity: 0 }}
@@ -491,10 +277,10 @@ function MenuItem({ item, qty, onAdd, onRemove, index }) {
 }
 
 // ── CATEGORY BAR ──────────────────────────────────────────────────────────
-function CategoryBar({ active, onSelect }) {
+function CategoryBar({ categories, active, onSelect }) {
   return (
     <div className="category-bar">
-      {CATEGORIES.map((cat) => (
+      {categories.map((cat) => (
         <button
           key={cat}
           className={"cat-pill" + (active === cat ? " cat-pill--active" : "")}
@@ -610,7 +396,28 @@ function CountdownTimer({ endTime }) {
 
 // ── TRACKING SCREEN ────────────────────────────────────────────────────────
 function TrackingScreen({ tableId, order, onOrderMore }) {
-  const queuePos = getQueuePosition(order.placedAt);
+  const [currentOrder, setCurrentOrder] = useState(order);
+
+  useEffect(() => {
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders`);
+        const allOrders = await res.json();
+        const currentId = currentOrder.order_id || currentOrder.orderId;
+        const found = allOrders.find((o) => {
+          const oid = o.order_id || o.orderId;
+          return String(oid) === String(currentId);
+        });
+        if (found) {
+          setCurrentOrder(found);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000);
+    return () => clearInterval(t);
+  }, [currentOrder.order_id, currentOrder.orderId]);
+  
   return (
     <motion.div
       className="tracking-screen"
@@ -622,18 +429,19 @@ function TrackingScreen({ tableId, order, onOrderMore }) {
       <div className="tracking-band">
         <UtensilsCrossed size={28} />
         <div>
-          <h1 className="tracking-title">Order Received</h1>
+          <h1 className="tracking-title">
+            {currentOrder.status === 'ready' ? "Order Ready!" : currentOrder.status === 'done' ? "Order Served" : "Order Received"}
+          </h1>
           <p className="tracking-table">{tableId}</p>
         </div>
       </div>
       <div className="tracking-body">
         <div className="tracking-left">
           <div className="queue-block">
-            <span className="queue-pos">{ordinal(queuePos)}</span>
-            <p className="queue-label">in the kitchen queue</p>
+            <span className="queue-pos">{currentOrder.status === 'cooking' ? "Cooking" : currentOrder.status.toUpperCase()}</span>
+            <p className="queue-label">current status</p>
           </div>
-          <CountdownTimer endTime={order.endTime} />
-          {/* "Order more" now triggers table selector */}
+          {currentOrder.status === 'cooking' && currentOrder.endTime && <CountdownTimer endTime={currentOrder.endTime} />}
           <button className="btn-new-order" onClick={onOrderMore}>
             &#8592; Order more items
           </button>
@@ -641,17 +449,19 @@ function TrackingScreen({ tableId, order, onOrderMore }) {
         <div className="tracking-right">
           <div className="order-summary">
             <p className="summary-heading">Your order</p>
-            {order.items.map(({ item, qty }) => (
-              <div key={item.id} className="summary-row">
+            {currentOrder.items.map((entry) => {
+              const item = entry.item || entry;
+              return (
+              <div key={item.id || item.item_id} className="summary-row">
                 <span>
-                  {item.name} x {qty}
+                  {item.name} x {entry.qty || entry.quantity}
                 </span>
-                <span>&#8377;{item.price * qty}</span>
+                <span>&#8377;{item.price * (entry.qty || entry.quantity)}</span>
               </div>
-            ))}
+            )})}
             <div className="summary-total">
               <span>Total</span>
-              <span>&#8377;{order.total}</span>
+              <span>&#8377;{currentOrder.total || currentOrder.total_amount}</span>
             </div>
           </div>
         </div>
@@ -663,31 +473,64 @@ function TrackingScreen({ tableId, order, onOrderMore }) {
 // ── MAIN ───────────────────────────────────────────────────────────────────
 export default function Menu() {
   const tableId = getTableId();
-  const storageKey = "order_" + tableId.replace(" ", "_").toLowerCase();
+  const storageKey = "active_order_id_" + tableId.replace(" ", "_").toLowerCase();
 
+  const [menuData, setMenuData] = useState({});
+  const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState({});
   const [view, setView] = useState("menu");
   const [activeOrder, setActiveOrder] = useState(null);
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
+  const [activeCategory, setActiveCategory] = useState("");
   const [showAck, setShowAck] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null);
   const [showTableSelector, setShowTableSelector] = useState(false);
   const sectionRefs = useRef({});
 
-  // Restore persisted order
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey));
-      if (saved && saved.status === "cooking" && saved.endTime > Date.now()) {
-        setActiveOrder(saved);
-        setView("tracking");
+    async function fetchMenu() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/menu`);
+        const data = await res.json();
+        const grouped = data.reduce((acc, item) => {
+          if (!acc[item.category]) acc[item.category] = [];
+          acc[item.category].push({
+            ...item,
+            id: item.item_id,
+            desc: item.description
+          });
+          return acc;
+        }, {});
+        setMenuData(grouped);
+        const cats = Object.keys(grouped);
+        setCategories(cats);
+        if (cats.length > 0) setActiveCategory(cats[0]);
+      } catch (err) {
+        console.error("Failed to fetch menu:", err);
       }
-    } catch (_) {}
+    }
+    fetchMenu();
+  }, []);
+
+  useEffect(() => {
+    async function restoreOrder() {
+      const savedOrderId = localStorage.getItem(storageKey);
+      if (savedOrderId) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/orders`);
+          const all = await res.json();
+          const found = all.find(o => String(o.order_id) === String(savedOrderId));
+          if (found && found.status !== 'done') {
+            setActiveOrder(found);
+            setView("tracking");
+          }
+        } catch (_) {}
+      }
+    }
+    restoreOrder();
   }, [storageKey]);
 
-  // Scroll-spy
   useEffect(() => {
-    if (view !== "menu") return;
+    if (view !== "menu" || categories.length === 0) return;
     const obs = new IntersectionObserver(
       (entries) =>
         entries.forEach((e) => {
@@ -697,7 +540,7 @@ export default function Menu() {
     );
     Object.values(sectionRefs.current).forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [view]);
+  }, [view, categories]);
 
   const addItem = (item) =>
     setCart((p) => ({
@@ -718,46 +561,54 @@ export default function Menu() {
   const totalItems = cartEntries.reduce((s, e) => s + e.qty, 0);
   const totalPrice = cartEntries.reduce((s, e) => s + e.item.price * e.qty, 0);
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     const waitMins = calcWaitTime();
     const placedAt = Date.now();
-    const orderData = {
-      orderId: "ORD-" + placedAt,
+    const orderPayload = {
       tableId,
       items: cartEntries,
       total: totalPrice,
       waitMins,
-      placedAt,
-      endTime: placedAt + waitMins * 60 * 1000,
-      status: "cooking",
     };
-    localStorage.setItem(storageKey, JSON.stringify(orderData));
-    pushOrderToChef(orderData);
-    setPendingOrder(orderData);
-    setCart({});
-    setShowAck(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload)
+      });
+      const result = await res.json();
+      
+      if (result.orderId) {
+        const localOrder = {
+          ...orderPayload,
+          orderId: result.orderId,
+          status: 'cooking',
+          placedAt,
+          endTime: placedAt + waitMins * 60 * 1000
+        };
+        localStorage.setItem(storageKey, result.orderId);
+        setActiveOrder(localOrder);
+        setPendingOrder(localOrder);
+        setCart({});
+        setShowAck(true);
+      }
+    } catch (err) {
+      console.error("Order failed:", err);
+    }
   };
 
-  // When "Order more items" is clicked on tracking screen
   const handleOrderMore = () => {
     setShowTableSelector(true);
   };
 
-  // When a table is selected from the picker
   const handleTableSelect = (tableNum) => {
-    // Change URL to new table
     window.location.href = window.location.pathname + "?table=" + tableNum;
-    // This causes a full page reload which:
-    // 1. Sets the new table ID from URL
-    // 2. Checks localStorage for that table's order
-    // 3. If no active order → shows menu fresh
-    // 4. If active order → shows tracking for that table
   };
 
   return (
     <div className="app-root">
       <AnimatePresence mode="wait">
-        {/* TRACKING VIEW */}
         {view === "tracking" && activeOrder && (
           <TrackingScreen
             key="tracking"
@@ -767,7 +618,6 @@ export default function Menu() {
           />
         )}
 
-        {/* MENU VIEW */}
         {view === "menu" && (
           <motion.div
             key="menu"
@@ -796,6 +646,7 @@ export default function Menu() {
             </header>
 
             <CategoryBar
+              categories={categories}
               active={activeCategory}
               onSelect={(cat) => {
                 setActiveCategory(cat);
@@ -807,7 +658,7 @@ export default function Menu() {
             />
 
             <main className="menu-body">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <section
                   key={cat}
                   data-category={cat}
@@ -816,7 +667,7 @@ export default function Menu() {
                 >
                   <h2 className="section-title">{cat}</h2>
                   <div className="section-items">
-                    {MENU_DATA[cat].map((item, i) => (
+                    {menuData[cat] && menuData[cat].map((item, i) => (
                       <MenuItem
                         key={item.id}
                         item={item}

@@ -16,29 +16,30 @@ import {
 } from "lucide-react";
 import "../styles/chef.css";
 
+const API_BASE_URL = "http://localhost:5000/api";
+
 // ── HELPERS ────────────────────────────────────────────────────────────────
-function getOrders() {
-  try {
-    return JSON.parse(localStorage.getItem("chef_orders")) || [];
-  } catch (_) {
-    return [];
-  }
-}
-function saveOrders(orders) {
-  localStorage.setItem("chef_orders", JSON.stringify(orders));
-}
 function timeAgo(ts) {
-  const d = Math.floor((Date.now() - ts) / 1000);
+  if (!ts) return "recently";
+  // Handle both JS timestamp and SQL datetime string
+  const timestamp = typeof ts === 'number' ? ts : new Date(ts + "Z").getTime();
+  const d = Math.floor((Date.now() - timestamp) / 1000);
   if (d < 60) return d + "s ago";
   if (d < 3600) return Math.floor(d / 60) + "m ago";
   return Math.floor(d / 3600) + "h ago";
 }
+
 function todayRevenue(orders) {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   return orders
-    .filter((o) => o.placedAt >= start.getTime())
-    .reduce((s, o) => s + o.total, 0);
+    .filter((o) => {
+      const rawTs = o.placed_at || o.placedAt;
+      if (!rawTs) return false;
+      const ts = typeof rawTs === 'number' ? rawTs : new Date(rawTs + "Z").getTime();
+      return ts >= start.getTime();
+    })
+    .reduce((s, o) => s + (o.total_amount || o.total || 0), 0);
 }
 
 // ── STAT CARD ─────────────────────────────────────────────────────────────
@@ -63,19 +64,28 @@ function StatCard({ icon: Icon, label, value, color, index }) {
 
 // ── ORDER CARD ─────────────────────────────────────────────────────────────
 function OrderCard({ order, onMarkReady, onMarkDone, index }) {
+  // Adapt backend naming
+  const orderId = order.order_id || order.orderId;
+  const tableId = order.table_id || order.tableId;
+  const total = order.total_amount || order.total;
+  const placedAt = order.placed_at || order.placedAt;
+  const status = order.status;
+  const items = order.items || [];
+
   const isUrgent =
-    order.status === "cooking" && order.endTime < Date.now() + 3 * 60 * 1000;
+    status === "cooking" && order.endTime < Date.now() + 3 * 60 * 1000;
+    
   return (
     <motion.div
       className={
         "order-card" +
         (isUrgent ? " order-card--urgent" : "") +
-        (order.status === "ready" ? " order-card--ready" : "") +
-        (order.status === "done" ? " order-card--done" : "")
+        (status === "ready" ? " order-card--ready" : "") +
+        (status === "done" ? " order-card--done" : "")
       }
       initial={{ opacity: 0, scale: 0.94, y: 12 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, x: order.status === "done" ? 30 : -30 }}
+      exit={{ opacity: 0, scale: 0.9, x: status === "done" ? 30 : -30 }}
       transition={{
         delay: index * 0.05,
         duration: 0.3,
@@ -85,26 +95,26 @@ function OrderCard({ order, onMarkReady, onMarkDone, index }) {
     >
       {/* Header */}
       <div className="ocard-head">
-        <span className="ocard-table">{order.tableId}</span>
+        <span className="ocard-table">{tableId}</span>
         <div className="ocard-head-right">
-          {isUrgent && order.status === "cooking" && (
+          {isUrgent && status === "cooking" && (
             <span className="ocard-urgent-badge">URGENT</span>
           )}
-          {order.status === "ready" && (
+          {status === "ready" && (
             <span className="ocard-ready-badge">READY</span>
           )}
           <span className="ocard-time">
-            <Clock size={11} /> {timeAgo(order.placedAt)}
+            <Clock size={11} /> {timeAgo(placedAt)}
           </span>
         </div>
       </div>
 
       {/* Items */}
       <div className="ocard-items">
-        {order.items.map(({ item, qty }) => (
-          <div key={item.id} className="ocard-item">
-            <span className="ocard-item-name">{item.name}</span>
-            <span className="ocard-item-qty">x{qty}</span>
+        {items.map((item, idx) => (
+          <div key={item.id || item.item_id || idx} className="ocard-item">
+            <span className="ocard-item-name">{item.name || (item.item && item.item.name)}</span>
+            <span className="ocard-item-qty">x{item.qty || item.quantity}</span>
           </div>
         ))}
       </div>
@@ -113,21 +123,21 @@ function OrderCard({ order, onMarkReady, onMarkDone, index }) {
       <div className="ocard-footer">
         <span className="ocard-total">
           <IndianRupee size={12} />
-          {order.total}
+          {total}
         </span>
         <div className="ocard-actions">
-          {order.status === "cooking" && (
+          {status === "cooking" && (
             <button
               className="ocard-btn ocard-btn--ready"
-              onClick={() => onMarkReady(order.orderId)}
+              onClick={() => onMarkReady(orderId)}
             >
               Mark Ready
             </button>
           )}
-          {order.status === "ready" && (
+          {status === "ready" && (
             <button
               className="ocard-btn ocard-btn--done"
-              onClick={() => onMarkDone(order.orderId)}
+              onClick={() => onMarkDone(orderId)}
             >
               Served ✓
             </button>
@@ -140,42 +150,73 @@ function OrderCard({ order, onMarkReady, onMarkDone, index }) {
 
 // ── MAIN ───────────────────────────────────────────────────────────────────
 export default function ChefDashboard() {
-  const [orders, setOrders] = useState(getOrders);
+  const [orders, setOrders] = useState([]);
+  const [clearedOrderIds, setClearedOrderIds] = useState(new Set());
+  const [stats, setStats] = useState({ revenue: 0, servedToday: 0 });
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
-  // Poll every 4 seconds for new customer orders
-  useEffect(() => {
-    const t = setInterval(() => {
-      setOrders(getOrders());
-      setLastRefresh(Date.now());
-    }, 4000);
-    return () => clearInterval(t);
-  }, []);
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders`);
+      const data = await res.json();
+      
+      // Calculate stats from FULL list before filtering
+      const revenue = todayRevenue(data);
+      const servedToday = data.filter(o => o.status === 'done').length;
+      setStats({ revenue, servedToday });
 
-  const markReady = (id) => {
-    const u = orders.map((o) =>
-      o.orderId === id ? { ...o, status: "ready" } : o,
-    );
-    saveOrders(u);
-    setOrders(u);
+      // Filter out manually cleared orders for the board
+      const filtered = data.filter(o => !clearedOrderIds.has(o.order_id || o.orderId));
+      setOrders(filtered);
+      setLastRefresh(Date.now());
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    }
   };
-  const markDone = (id) => {
-    const u = orders.map((o) =>
-      o.orderId === id ? { ...o, status: "done" } : o,
-    );
-    saveOrders(u);
-    setOrders(u);
+
+  useEffect(() => {
+    fetchOrders();
+    const t = setInterval(fetchOrders, 4000);
+    return () => clearInterval(t);
+  }, [clearedOrderIds]); // Re-run when cleared IDs change to refresh view
+
+  const markReady = async (id) => {
+    try {
+      await fetch(`${API_BASE_URL}/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ready" })
+      });
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
   };
+
+  const markDone = async (id) => {
+    try {
+      await fetch(`${API_BASE_URL}/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done" })
+      });
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
   const clearDone = () => {
-    const u = orders.filter((o) => o.status !== "done");
-    saveOrders(u);
-    setOrders(u);
+    const doneIds = orders
+      .filter(o => o.status === 'done')
+      .map(o => o.order_id || o.orderId);
+    setClearedOrderIds(prev => new Set([...prev, ...doneIds]));
+    setOrders(prev => prev.filter(o => o.status !== 'done'));
   };
 
   const cooking = orders.filter((o) => o.status === "cooking");
   const ready = orders.filter((o) => o.status === "ready");
   const done = orders.filter((o) => o.status === "done");
-  const revenue = todayRevenue(orders);
 
   return (
     <div className="chef-shell">
@@ -216,14 +257,14 @@ export default function ChefDashboard() {
         <StatCard
           icon={Users}
           label="Served Today"
-          value={done.length}
+          value={stats.servedToday}
           color="blue"
           index={2}
         />
         <StatCard
           icon={TrendingUp}
           label="Today Revenue"
-          value={"₹" + revenue}
+          value={"₹" + stats.revenue}
           color="gold"
           index={3}
         />
@@ -250,7 +291,7 @@ export default function ChefDashboard() {
               )}
               {cooking.map((order, i) => (
                 <OrderCard
-                  key={order.orderId}
+                  key={order.order_id || order.orderId}
                   order={order}
                   onMarkReady={markReady}
                   onMarkDone={markDone}
@@ -280,7 +321,7 @@ export default function ChefDashboard() {
               )}
               {ready.map((order, i) => (
                 <OrderCard
-                  key={order.orderId}
+                  key={order.order_id || order.orderId}
                   order={order}
                   onMarkReady={markReady}
                   onMarkDone={markDone}
@@ -311,7 +352,7 @@ export default function ChefDashboard() {
                 .slice(0, 6)
                 .map((order, i) => (
                   <OrderCard
-                    key={order.orderId}
+                    key={order.order_id || order.orderId}
                     order={order}
                     onMarkReady={markReady}
                     onMarkDone={markDone}
