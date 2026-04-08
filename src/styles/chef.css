@@ -511,16 +511,33 @@ body {
   opacity: 0.68;
 }
 
-.ocard-btn--ready {
+.ocard-btn--ready,
+.ocard-btn--preparing {
   background: var(--grad-fire);
   color: #fff8f0;
   box-shadow: 0 2px 8px rgba(201, 124, 40, 0.28);
 }
 
-.ocard-btn--done {
+.ocard-btn--done,
+.ocard-btn--served {
   background: var(--grad-green);
   color: #f0fff8;
   box-shadow: 0 2px 8px rgba(42, 153, 98, 0.28);
+}
+
+/* Status specific borders */
+.order-card.status-placed {
+  border-left-color: var(--blue);
+}
+.order-card.status-preparing {
+  border-left-color: var(--fire);
+}
+.order-card.status-served {
+  border-left-color: var(--green);
+}
+.order-card.status-paid {
+  border-left-color: var(--gold);
+  opacity: 0.6;
 }
 
 /* ── FOOTER ───────────────────────────────────────────────── */

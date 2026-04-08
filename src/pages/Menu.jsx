@@ -1,7 +1,4 @@
 // src/pages/Menu.jsx
-// REQUIRES: npm install framer-motion lucide-react
-// Customer URL: http://localhost:5173/?table=3
-
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -15,6 +12,7 @@ import {
   ShoppingCart,
   X,
   MapPin,
+  Utensils,
 } from "lucide-react";
 import "../styles/menu.css";
 
@@ -24,16 +22,13 @@ const API_BASE_URL = "http://localhost:5000/api";
 const TABLE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
-function getTableId() {
+function getInitialTableId() {
   const p = new URLSearchParams(window.location.search);
   const n = Number(p.get("table"));
-  return !isNaN(n) && n >= 1 && n <= 10 ? "Table " + n : "Table 0";
-}
-function getActiveOrderCount() {
-  return 2;
+  return !isNaN(n) && n >= 1 && n <= 10 ? n : null;
 }
 function calcWaitTime() {
-  return Math.floor(Math.random() * 5) + 5 + getActiveOrderCount() * 3;
+  return Math.floor(Math.random() * 5) + 10;
 }
 
 // ── TABLE SELECTOR POPUP ───────────────────────────────────────────────────
@@ -44,6 +39,7 @@ function TableSelector({ onSelect }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      style={{ zIndex: 1000 }}
     >
       <motion.div
         className="table-selector-card"
@@ -53,10 +49,10 @@ function TableSelector({ onSelect }) {
         transition={{ type: "spring", stiffness: 320, damping: 26 }}
       >
         <div className="ts-header">
-          <MapPin size={20} className="ts-icon" />
+          <MapPin size={24} className="ts-icon" />
           <div>
-            <h2 className="ts-title">Select Your Table</h2>
-            <p className="ts-sub">Which table are you sitting at?</p>
+            <h2 className="ts-title">Welcome to The Kitchen</h2>
+            <p className="ts-sub">Please select your table to view the menu</p>
           </div>
         </div>
 
@@ -76,10 +72,51 @@ function TableSelector({ onSelect }) {
         </div>
 
         <p className="ts-note">
-          This will start a fresh order for the selected table
+          Selecting a table allows you to place orders and track active ones.
         </p>
       </motion.div>
     </motion.div>
+  );
+}
+
+// ── PENDING ORDERS DISPLAY ─────────────────────────────────────────────────
+function PendingOrdersSection({ orders, onOrderMore }) {
+  if (!orders || orders.length === 0) return null;
+
+  const activeOrders = orders.filter(o => o.status !== 'PAID');
+  if (activeOrders.length === 0) return null;
+
+  return (
+    <div className="pending-orders-sec">
+      <div className="pos-header">
+        <div className="pos-header-left">
+          <Clock size={16} className="pos-icon" />
+          <span className="pos-title">Active Table Orders</span>
+        </div>
+        <button className="pos-order-more" onClick={onOrderMore}>
+          Add More Food <ChevronRight size={14} />
+        </button>
+      </div>
+      <div className="pos-list">
+        {activeOrders.map((order) => (
+          <div key={order.order_id} className="pos-card">
+            <div className="pos-card-top">
+              <span className="pos-id">Order #{order.order_id}</span>
+              <span className={`pos-status status-${order.status.toLowerCase()}`}>
+                {order.status}
+              </span>
+            </div>
+            <div className="pos-items">
+              {order.items.map((item, idx) => (
+                <div key={idx} className="pos-item">
+                  {item.name} <span className="pos-qty">x{item.quantity || item.qty}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -96,10 +133,7 @@ function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
         onClick={() => setOpen((o) => !o)}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
         whileTap={{ scale: 0.92 }}
-        transition={{ type: "spring", stiffness: 380, damping: 28 }}
-        title="View cart"
       >
         <ShoppingCart size={20} />
         <span className="float-cart-count">{totalItems}</span>
@@ -120,7 +154,6 @@ function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
               initial={{ opacity: 0, y: -12, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
             >
               <div className="fcp-header">
                 <span className="fcp-title">Your Cart</span>
@@ -133,12 +166,10 @@ function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
                 {cartEntries.map(({ item, qty }) => (
                   <div key={item.id} className="fcp-item">
                     <span className="fcp-item-name">{item.name}</span>
-                    <span className="fcp-item-right">
+                    <div className="fcp-item-right">
                       <span className="fcp-item-qty">x{qty}</span>
-                      <span className="fcp-item-price">
-                        &#8377;{item.price * qty}
-                      </span>
-                    </span>
+                      <span className="fcp-item-price">&#8377;{item.price * qty}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -169,10 +200,6 @@ function FloatingCart({ cartEntries, totalItems, totalPrice, onPlace }) {
 
 // ── ACK POPUP ─────────────────────────────────────────────────────────────
 function AckPopup({ tableId, waitMins, itemCount, onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 4500);
-    return () => clearTimeout(t);
-  }, [onClose]);
   return (
     <motion.div
       className="ack-overlay"
@@ -195,13 +222,11 @@ function AckPopup({ tableId, waitMins, itemCount, onClose }) {
           <PartyPopper size={40} className="ack-icon" />
         </motion.div>
         <h2 className="ack-title">Order Placed!</h2>
-        <p className="ack-table">{tableId}</p>
+        <p className="ack-table">Table {tableId}</p>
         <div className="ack-stats">
           <div className="ack-stat">
             <span className="ack-stat-val">{itemCount}</span>
-            <span className="ack-stat-lbl">
-              {itemCount === 1 ? "item" : "items"}
-            </span>
+            <span className="ack-stat-lbl">{itemCount === 1 ? "item" : "items"}</span>
           </div>
           <div className="ack-stat-sep" />
           <div className="ack-stat">
@@ -209,15 +234,16 @@ function AckPopup({ tableId, waitMins, itemCount, onClose }) {
             <span className="ack-stat-lbl">wait time</span>
           </div>
         </div>
-        <p className="ack-msg">
-          Your order is with the kitchen. Sit back and relax!
-        </p>
+        <p className="ack-msg">You can continue adding more food anytime!</p>
+        <button className="ack-close-btn" onClick={onClose}>
+          Awesome, Back to Menu
+        </button>
         <div className="ack-bar-track">
           <motion.div
             className="ack-bar-fill"
             initial={{ width: "100%" }}
             animate={{ width: "0%" }}
-            transition={{ duration: 4.5, ease: "linear" }}
+            transition={{ duration: 10, ease: "linear" }}
           />
         </div>
       </motion.div>
@@ -232,15 +258,10 @@ function MenuItem({ item, qty, onAdd, onRemove, index }) {
       className="menu-item"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{
-        delay: index * 0.038,
-        duration: 0.32,
-        ease: [0.25, 1, 0.5, 1],
-      }}
+      transition={{ delay: index * 0.03, duration: 0.3 }}
     >
       <div className="item-info">
         <span className="item-name">{item.name}</span>
-        <span className="item-desc">{item.desc}</span>
         <span className="item-price">&#8377;{item.price}</span>
       </div>
       <div className="item-controls">
@@ -300,8 +321,8 @@ function CategoryBar({ categories, active, onSelect }) {
   );
 }
 
-// ── BOTTOM CART BAR ────────────────────────────────────────────────────────
-function CartBar({ total, itemCount, cartEntries, onPlace }) {
+// ── CART BAR ──────────────────────────────────────────────────────────────
+function CartBar({ total, itemCount, onPlace }) {
   return (
     <AnimatePresence>
       {total > 0 && (
@@ -310,182 +331,40 @@ function CartBar({ total, itemCount, cartEntries, onPlace }) {
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 340, damping: 30 }}
         >
           <div className="cart-left">
-            <span className="cart-count">
-              {itemCount} {itemCount === 1 ? "item" : "items"}
-            </span>
+            <span className="cart-count">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
             <span className="cart-total">&#8377;{total}</span>
           </div>
-          <div className="cart-items-preview">
-            {cartEntries.slice(0, 4).map(({ item, qty }) => (
-              <span key={item.id} className="cart-chip">
-                {item.name} x{qty}
-              </span>
-            ))}
-            {cartEntries.length > 4 && (
-              <span className="cart-chip">+{cartEntries.length - 4} more</span>
-            )}
-          </div>
-          <div className="cart-right">
-            <motion.button
-              className="btn-place"
-              onClick={onPlace}
-              whileTap={{ scale: 0.96 }}
-            >
-              Place Order <ChevronRight size={16} />
-            </motion.button>
-          </div>
+          <motion.button
+            className="btn-place"
+            onClick={onPlace}
+            whileTap={{ scale: 0.96 }}
+          >
+            Place Order <ChevronRight size={16} />
+          </motion.button>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
-// ── COUNTDOWN ─────────────────────────────────────────────────────────────
-function CountdownTimer({ endTime }) {
-  const totalRef = useRef(
-    Math.max(1, Math.floor((endTime - Date.now()) / 1000)),
-  );
-  const [secsLeft, setSecsLeft] = useState(() => {
-    const d = Math.floor((endTime - Date.now()) / 1000);
-    return d > 0 ? d : 0;
-  });
-  useEffect(() => {
-    if (secsLeft <= 0) return;
-    const t = setInterval(() => {
-      setSecsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [endTime]);
-  const mins = Math.floor(secsLeft / 60);
-  const secs = secsLeft % 60;
-  const done = secsLeft === 0;
-  const pct = done ? 0 : (secsLeft / totalRef.current) * 100;
-  return (
-    <div className={"countdown" + (done ? " countdown--done" : "")}>
-      <div className="countdown-row">
-        {done ? (
-          <span className="done-label">
-            <CheckCircle size={16} /> Your order is ready!
-          </span>
-        ) : (
-          <>
-            <Clock size={14} />
-            <span>
-              {mins}m {String(secs).padStart(2, "0")}s remaining
-            </span>
-          </>
-        )}
-      </div>
-      {!done && (
-        <div className="cdown-track">
-          <div className="cdown-fill" style={{ width: pct + "%" }} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── TRACKING SCREEN ────────────────────────────────────────────────────────
-function TrackingScreen({ tableId, order, onOrderMore }) {
-  const [currentOrder, setCurrentOrder] = useState(order);
-
-  useEffect(() => {
-    const t = setInterval(async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/orders`);
-        const allOrders = await res.json();
-        const currentId = currentOrder.order_id || currentOrder.orderId;
-        const found = allOrders.find((o) => {
-          const oid = o.order_id || o.orderId;
-          return String(oid) === String(currentId);
-        });
-        if (found) {
-          setCurrentOrder(found);
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 3000);
-    return () => clearInterval(t);
-  }, [currentOrder.order_id, currentOrder.orderId]);
-  
-  return (
-    <motion.div
-      className="tracking-screen"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-    >
-      <div className="tracking-band">
-        <UtensilsCrossed size={28} />
-        <div>
-          <h1 className="tracking-title">
-            {currentOrder.status === 'ready' ? "Order Ready!" : currentOrder.status === 'done' ? "Order Served" : "Order Received"}
-          </h1>
-          <p className="tracking-table">{tableId}</p>
-        </div>
-      </div>
-      <div className="tracking-body">
-        <div className="tracking-left">
-          <div className="queue-block">
-            <span className="queue-pos">{currentOrder.status === 'cooking' ? "Cooking" : currentOrder.status.toUpperCase()}</span>
-            <p className="queue-label">current status</p>
-          </div>
-          {currentOrder.status === 'cooking' && currentOrder.endTime && <CountdownTimer endTime={currentOrder.endTime} />}
-          <button className="btn-new-order" onClick={onOrderMore}>
-            &#8592; Order more items
-          </button>
-        </div>
-        <div className="tracking-right">
-          <div className="order-summary">
-            <p className="summary-heading">Your order</p>
-            {currentOrder.items.map((entry) => {
-              const item = entry.item || entry;
-              return (
-              <div key={item.id || item.item_id} className="summary-row">
-                <span>
-                  {item.name} x {entry.qty || entry.quantity}
-                </span>
-                <span>&#8377;{item.price * (entry.qty || entry.quantity)}</span>
-              </div>
-            )})}
-            <div className="summary-total">
-              <span>Total</span>
-              <span>&#8377;{currentOrder.total || currentOrder.total_amount}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ── MAIN ───────────────────────────────────────────────────────────────────
 export default function Menu() {
-  const tableId = getTableId();
-  const storageKey = "active_order_id_" + tableId.replace(" ", "_").toLowerCase();
-
+  const [tableId, setTableId] = useState(getInitialTableId());
   const [menuData, setMenuData] = useState({});
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState({});
-  const [view, setView] = useState("menu");
-  const [activeOrder, setActiveOrder] = useState(null);
+  const [pendingOrders, setPendingOrders] = useState([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [showAck, setShowAck] = useState(false);
-  const [pendingOrder, setPendingOrder] = useState(null);
-  const [showTableSelector, setShowTableSelector] = useState(false);
+  const [lastWaitMins, setLastWaitMins] = useState(0);
+  const [lastOrderItems, setLastOrderItems] = useState(0);
+  
   const sectionRefs = useRef({});
+  const menuStartRef = useRef(null);
 
+  // Fetch Menu
   useEffect(() => {
     async function fetchMenu() {
       try {
@@ -493,11 +372,7 @@ export default function Menu() {
         const data = await res.json();
         const grouped = data.reduce((acc, item) => {
           if (!acc[item.category]) acc[item.category] = [];
-          acc[item.category].push({
-            ...item,
-            id: item.item_id,
-            desc: item.description
-          });
+          acc[item.category].push({ ...item, id: item.item_id });
           return acc;
         }, {});
         setMenuData(grouped);
@@ -511,42 +386,46 @@ export default function Menu() {
     fetchMenu();
   }, []);
 
+  // Poll Orders
   useEffect(() => {
-    async function restoreOrder() {
-      const savedOrderId = localStorage.getItem(storageKey);
-      if (savedOrderId) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/orders`);
-          const all = await res.json();
-          const found = all.find(o => String(o.order_id) === String(savedOrderId));
-          if (found && found.status !== 'done') {
-            setActiveOrder(found);
-            setView("tracking");
-          }
-        } catch (_) {}
-      }
-    }
-    restoreOrder();
-  }, [storageKey]);
+    if (!tableId) return;
 
+    const fetchTableOrders = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders?table_id=${tableId}`);
+        const data = await res.json();
+        setPendingOrders(data.filter(o => o.status !== 'PAID'));
+      } catch (err) {
+        console.error("Failed to fetch orders:", err);
+      }
+    };
+
+    fetchTableOrders();
+    const interval = setInterval(fetchTableOrders, 5000);
+    return () => clearInterval(interval);
+  }, [tableId]);
+
+  // Observer
   useEffect(() => {
-    if (view !== "menu" || categories.length === 0) return;
+    if (categories.length === 0) return;
     const obs = new IntersectionObserver(
-      (entries) =>
+      (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) setActiveCategory(e.target.dataset.category);
-        }),
-      { rootMargin: "-40% 0px -55% 0px" },
+        });
+      },
+      { rootMargin: "-40% 0px -55% 0px" }
     );
     Object.values(sectionRefs.current).forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [view, categories]);
+  }, [categories]);
 
   const addItem = (item) =>
     setCart((p) => ({
       ...p,
       [item.id]: { item, qty: (p[item.id]?.qty ?? 0) + 1 },
     }));
+
   const removeItem = (item) =>
     setCart((p) => {
       if ((p[item.id]?.qty ?? 0) <= 1) {
@@ -558,174 +437,162 @@ export default function Menu() {
     });
 
   const cartEntries = Object.values(cart);
-  const totalItems = cartEntries.reduce((s, e) => s + e.qty, 0);
-  const totalPrice = cartEntries.reduce((s, e) => s + e.item.price * e.qty, 0);
+  const currentCartCount = cartEntries.reduce((s, e) => s + e.qty, 0);
+  const currentCartTotal = cartEntries.reduce((s, e) => s + e.item.price * e.qty, 0);
+
+  // Calculate total items currently pending in kitchen
+  const pendingKitchenItems = pendingOrders.reduce((acc, order) => {
+    return acc + (order.items?.reduce((s, i) => s + (i.quantity || i.qty || 0), 0) || 0);
+  }, 0);
+
+  const handleTableSelect = (num) => {
+    setTableId(num);
+    const url = new URL(window.location);
+    url.searchParams.set("table", num);
+    window.history.pushState({}, "", url);
+  };
 
   const placeOrder = async () => {
-    const waitMins = calcWaitTime();
-    const placedAt = Date.now();
-    const orderPayload = {
+    const mins = calcWaitTime();
+    const itemsCount = currentCartCount;
+    setLastWaitMins(mins);
+    setLastOrderItems(itemsCount);
+    
+    const payload = {
       tableId,
-      items: cartEntries,
-      total: totalPrice,
-      waitMins,
+      items: cartEntries.map(e => ({ item_id: e.item.id, quantity: e.qty, name: e.item.name }))
     };
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload)
+        body: JSON.stringify(payload)
       });
       const result = await res.json();
-      
       if (result.orderId) {
-        const localOrder = {
-          ...orderPayload,
-          orderId: result.orderId,
-          status: 'cooking',
-          placedAt,
-          endTime: placedAt + waitMins * 60 * 1000
+        // Optimistic update for the pending list
+        const optimisticOrder = {
+          order_id: result.orderId,
+          status: 'PLACED',
+          items: payload.items,
+          table_id: tableId
         };
-        localStorage.setItem(storageKey, result.orderId);
-        setActiveOrder(localOrder);
-        setPendingOrder(localOrder);
+        setPendingOrders(prev => [optimisticOrder, ...prev]);
         setCart({});
         setShowAck(true);
+      } else {
+        alert(result.error || "Order failed");
       }
     } catch (err) {
       console.error("Order failed:", err);
     }
   };
 
-  const handleOrderMore = () => {
-    setShowTableSelector(true);
-  };
-
-  const handleTableSelect = (tableNum) => {
-    window.location.href = window.location.pathname + "?table=" + tableNum;
+  const scrollMenu = () => {
+    menuStartRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <div className="app-root">
-      <AnimatePresence mode="wait">
-        {view === "tracking" && activeOrder && (
-          <TrackingScreen
-            key="tracking"
-            tableId={tableId}
-            order={activeOrder}
-            onOrderMore={handleOrderMore}
-          />
-        )}
+      <AnimatePresence>
+        {!tableId && <TableSelector onSelect={handleTableSelect} />}
+      </AnimatePresence>
 
-        {view === "menu" && (
-          <motion.div
-            key="menu"
-            className="menu-view"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <header className="menu-header">
-              <div className="header-left">
-                <div className="header-table-badge">{tableId}</div>
-                <h1 className="menu-brand">The Kitchen</h1>
-                <p className="menu-tagline">
-                  Fresh &middot; Seasonal &middot; North Indian
-                </p>
-              </div>
-              <div className="header-right">
+      {tableId && (
+        <motion.div
+          className="menu-view"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <header className="menu-header">
+            <div className="header-left">
+              <button 
+                className="header-table-badge" 
+                onClick={() => setTableId(null)}
+                title="Change Table"
+              >
+                Table {tableId}
+              </button>
+              <h1 className="menu-brand">The Kitchen</h1>
+              <p className="menu-tagline">Fresh • Seasonal • North Indian</p>
+            </div>
+            <div className="header-right">
+              <div className="header-meta-group">
                 <div className="header-meta">
-                  <p className="header-meta-label">Items in cart</p>
-                  <p className="header-meta-val">
-                    {totalItems > 0 ? totalItems + " items" : "\u2014"}
-                  </p>
+                  <p className="header-meta-label">In Cart</p>
+                  <p className="header-meta-val">{currentCartCount}</p>
+                </div>
+                <div className="header-meta-sep" />
+                <div className="header-meta">
+                  <p className="header-meta-label">In Kitchen</p>
+                  <p className="header-meta-val">{pendingKitchenItems}</p>
                 </div>
               </div>
-            </header>
+            </div>
+          </header>
 
-            <CategoryBar
-              categories={categories}
-              active={activeCategory}
-              onSelect={(cat) => {
-                setActiveCategory(cat);
-                sectionRefs.current[cat]?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              }}
-            />
-
-            <main className="menu-body">
-              {categories.map((cat) => (
-                <section
-                  key={cat}
-                  data-category={cat}
-                  ref={(el) => (sectionRefs.current[cat] = el)}
-                  className="menu-section"
-                >
-                  <h2 className="section-title">{cat}</h2>
-                  <div className="section-items">
-                    {menuData[cat] && menuData[cat].map((item, i) => (
-                      <MenuItem
-                        key={item.id}
-                        item={item}
-                        qty={cart[item.id]?.qty ?? 0}
-                        onAdd={addItem}
-                        onRemove={removeItem}
-                        index={i}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </main>
-
-            {/* Floating cart bubble — always on top-right */}
-            <AnimatePresence>
-              {totalItems > 0 && (
-                <FloatingCart
-                  cartEntries={cartEntries}
-                  totalItems={totalItems}
-                  totalPrice={totalPrice}
-                  onPlace={placeOrder}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Bottom cart bar */}
-            <CartBar
-              total={totalPrice}
-              itemCount={totalItems}
-              cartEntries={cartEntries}
-              onPlace={placeOrder}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ACK POPUP */}
-      <AnimatePresence>
-        {showAck && pendingOrder && (
-          <AckPopup
-            key="ack"
-            tableId={tableId}
-            waitMins={pendingOrder.waitMins}
-            itemCount={pendingOrder.items.reduce((s, e) => s + e.qty, 0)}
-            onClose={() => {
-              setShowAck(false);
-              setActiveOrder(pendingOrder);
-              setView("tracking");
+          <CategoryBar
+            categories={categories}
+            active={activeCategory}
+            onSelect={(cat) => {
+              setActiveCategory(cat);
+              sectionRefs.current[cat]?.scrollIntoView({ behavior: "smooth" });
             }}
           />
-        )}
-      </AnimatePresence>
 
-      {/* TABLE SELECTOR POPUP */}
+          <main className="menu-body">
+            <PendingOrdersSection orders={pendingOrders} onOrderMore={scrollMenu} />
+            
+            <div ref={menuStartRef} className="menu-start-anchor" />
+
+            {categories.map((cat) => (
+              <section
+                key={cat}
+                data-category={cat}
+                ref={(el) => (sectionRefs.current[cat] = el)}
+                className="menu-section"
+              >
+                <h2 className="section-title">{cat}</h2>
+                <div className="section-items">
+                  {menuData[cat]?.map((item, i) => (
+                    <MenuItem
+                      key={item.id}
+                      item={item}
+                      qty={cart[item.id]?.qty ?? 0}
+                      onAdd={addItem}
+                      onRemove={removeItem}
+                      index={i}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </main>
+
+          <FloatingCart
+            cartEntries={cartEntries}
+            totalItems={currentCartCount}
+            totalPrice={currentCartTotal}
+            onPlace={placeOrder}
+          />
+
+          <CartBar
+            total={currentCartTotal}
+            itemCount={currentCartCount}
+            onPlace={placeOrder}
+          />
+        </motion.div>
+      )}
+
       <AnimatePresence>
-        {showTableSelector && (
-          <TableSelector key="table-sel" onSelect={handleTableSelect} />
+        {showAck && (
+          <AckPopup
+            tableId={tableId}
+            waitMins={lastWaitMins}
+            itemCount={lastOrderItems}
+            onClose={() => setShowAck(false)}
+          />
         )}
       </AnimatePresence>
     </div>
